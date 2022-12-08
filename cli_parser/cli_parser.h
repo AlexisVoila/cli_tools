@@ -12,8 +12,7 @@
 
 namespace cli {
     namespace {
-        std::string_view rtrim_copy(std::string_view str, std::string_view pattern)
-        {
+        std::string_view rtrim_copy(std::string_view str, std::string_view pattern) {
             if (const auto pos = str.rfind(pattern.data()); pos != std::string_view::npos)
                 return std::string_view{str.data(), pos};
 
@@ -74,7 +73,7 @@ namespace cli {
         }
 
         void set_parsed(bool is_parsed) {
-            is_parsed_ = true;
+            is_parsed_ = is_parsed;
         }
 
         std::string short_name() const { return short_name_; }
@@ -215,7 +214,7 @@ namespace cli {
         }
 
     private:
-        void print_usage_examples() {
+        void print_usage_examples() const {
             static const std::string tab(4, ' ');
             for (const auto& str : usage_examples_)
                 std::cout << tab << str << std::endl;
@@ -239,7 +238,7 @@ namespace cli {
             );
         }
 
-        std::optional<std::string> check_required_args() {
+        std::optional<std::string> check_required_args() const {
             for (const auto& it : params_)
                 if (it->is_required() && it->value().empty())
                     return {"Expected required parameter value: " + it->short_name() + " [" + it->long_name() + "]"};

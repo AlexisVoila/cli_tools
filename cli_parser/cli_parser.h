@@ -2,13 +2,17 @@
 
 #include <iostream>
 #include <unordered_map>
+#include <unordered_set>
+#include <map>
 #include <algorithm>
 #include <optional>
 #include <iomanip>
-#include <set>
 #include <vector>
+#include <functional>
 #include <exception>
 #include <sstream>
+#include <memory>
+#include <utility>
 
 namespace cli {
     namespace {
@@ -33,41 +37,58 @@ namespace cli {
 
             return !key.empty() || !value.empty();
         }
+
+        std::vector<std::string> strings_from_raw_args(int argc, char* argv[]) {
+            if (argc < 1 || argv == nullptr)
+                return {};
+
+            std::vector<std::string> args;
+            args.reserve(static_cast<std::size_t>(argc));
+
+            for (int i = 0; i < argc; ++i) {
+                if (argv[i] == nullptr)
+                    return {};
+
+                args.push_back(argv[i]);
+            }
+
+            return args;
+        }
     }
 
     class param {
     public:
-        param& set_short_name(std::string short_name) {
+        param& short_name(std::string short_name) {
             short_name_ = short_name;
             return *this;
         }
 
-        param& set_long_name(std::string long_name) {
+        param& long_name(std::string long_name) {
             long_name_ = long_name;
             return *this;
         }
 
-        param& set_default_value(std::string default_value) {
+        param& default_value(std::string default_value) {
             default_value_ = default_value;
             return *this;
         }
 
-        param& set_description(std::string description) {
+        param& description(std::string description) {
             description_ = description;
             return *this;
         }
 
-        param& set_value(std::string value) {
+        param& value(std::string value) {
             value_ = value;
             return *this;
         }
 
-        param& set_required() {
+        param& required() {
             is_required_ = true;
             return *this;
         }
 
-        param& set_flag() {
+        param& flag() {
             is_flag_ = true;
             return *this;
         }
@@ -96,9 +117,7 @@ namespace cli {
             return result;
         }
 
-        std::string get_value_as_str() const {
-            return value_;
-        }
+        std::string get_value_as_str() const { return value_; }
 
     private:
         std::string short_name_;
@@ -116,32 +135,51 @@ namespace cli {
     public:
         param_parser& add_parameter(cli::param parm) {
             const auto ptr{std::make_shared<cli::param>(parm)};
-            params_.insert(ptr);
-            if (!ptr->short_name().empty())
-                params_map_.insert({ptr->short_name(), ptr});
-            if (!ptr->long_name().empty())
-                params_map_.insert({ptr->long_name(), ptr});
+
+            if (!ptr->short_name().empty()) {
+                if (auto p = params_map_.find(ptr->short_name()); p != params_map_.end()) {
+                    if (ptr->long_name() != p->second->long_name()) {
+                        params_map_.erase(p->second->long_name());
+                        p->second = ptr;
+                    }
+                } else {
+                    params_map_.insert({ptr->short_name(), ptr});
+                }
+            }
+
+            if (!ptr->long_name().empty()) {
+                if (const auto p = params_map_.find(ptr->long_name()); p != params_map_.end()) {
+                    if (ptr->short_name() != p->second->short_name()) {
+                        params_map_.erase(p->second->short_name());
+                        p->second = ptr;
+                    }
+                } else {
+                    params_map_.insert({ptr->long_name(), ptr});
+                }
+            }
+
             if (!ptr->default_value().empty() && ptr->value().empty())
-                ptr->set_value(ptr->default_value());
+                ptr->value(ptr->default_value());
+
             return *this;
         }
 
-        std::optional<std::string> parse(int argc, char* argv[]) {
-            std::size_t parm_count = static_cast<std::size_t>(argc - 1);
+        std::optional<std::string> parse(const std::vector<std::string>& args) {
+            std::size_t parm_count = args.size() - 1;
 
             if (parm_count < required_args_count())
                 return {"Not all required arguments are specified"};
 
-            for (int i = 1; i < argc; ++i) {
-                std::string_view parm{argv[i]};
+            for (std::size_t i = 1; i < args.size(); ++i) {
+                const std::string& parm{args[i]};
                 std::string parm_name, parm_value;
 
                 // check for short parm_name case
                 if (parm.size() != 2) {
-                    if (!parse_key_arg(argv[i], parm_name, parm_value))
-                        return {"Parameter format parse error: " + std::string{argv[i]}};
+                    if (!parse_key_arg(parm, parm_name, parm_value))
+                        return {"Parameter format parse error: " + std::string{parm}};
                 } else {
-                    parm_name = argv[i];
+                    parm_name = parm;
                 }
 
                 const auto it_arg = params_map_.find(parm_name);
@@ -155,10 +193,10 @@ namespace cli {
                     // The case when the param parm_name is given in a short form 
                     // and requires its parm_value, but the parm_value is not provided
                     if (parm_value.empty()) {
-                        if (i == (argc - 1))
+                        if (i == parm_count)
                             return {"Expected value for the key: " + parm_name};
                         else {
-                            parm_value = argv[i + 1];
+                            parm_value = args[i + 1];
                             ++i;
                         }
                     }
@@ -166,14 +204,18 @@ namespace cli {
                     if (parm_value[0] == '-')
                         return {"Expected value for the key: " + parm_name};
 
-                    parg->set_value(parm_value);
+                    parg->value(parm_value);
                     parg->set_parsed(true);
                 } else {
-                    return {"An unknown parameter key is specified: " + std::string{argv[i]}};
+                    return {"An unknown parameter key is specified: " + parm};
                 }
             }
 
             return check_required_args();
+        }
+
+        std::optional<std::string> parse(int argc, char* argv[]) {
+            return parse(strings_from_raw_args(argc, argv));
         }
 
         void add_usage_string(std::string usage_string) {
@@ -183,24 +225,26 @@ namespace cli {
         void print_help() {
             static const std::string tab(4, ' ');
 
-            for (const auto& param : params_)
-                adust_fmt_max_field_lengths(param);
+            const auto params = all_params();
+
+            for (const auto& parm : params)
+                adust_fmt_max_field_lengths(parm);
 
             std::cout << "Usage: \n";
             print_usage_examples();
 
-            for (const auto& param : params_) {
-                std::cout << tab << param->short_name() << " ";
-                if (!param->long_name().empty())
-                    std::cout << std::left << " [ " << std::setw(max_long_param_name_length_) << param->long_name() << " ] ";
+            for (const auto& parm: params) {
+                std::cout << tab << parm->short_name() << " ";
+                if (!parm->long_name().empty())
+                    std::cout << std::left << " [ " << std::setw(static_cast<int>(max_long_param_name_length_)) << parm->long_name() << " ] ";
 
-                if (!param->default_value().empty())
-                    std::cout << "(=" << std::setw(max_default_param_value_length_) << param->default_value() << ") ";
+                if (!parm->default_value().empty())
+                    std::cout << "(=" << std::setw(static_cast<int>(max_default_param_value_length_)) << parm->default_value() << ") ";
                 else
                     std::cout << std::string(max_default_param_value_length_ + tab.size(), ' ');
 
-                if (!param->description().empty())
-                    std::cout << param->description();
+                if (!parm->description().empty())
+                    std::cout << parm->description();
 
                 std::cout << "\n";
             }
@@ -211,6 +255,35 @@ namespace cli {
                 return *arg_it->second;
 
             throw(std::invalid_argument(""));
+        }
+
+        std::size_t parameters_count() const { return all_params().size(); }
+
+        void reset() {
+            params_map_.clear();
+            usage_examples_.clear();
+
+            max_long_param_name_length_ = 0;
+            max_default_param_value_length_ = 0;
+        }
+
+        const std::vector<param_ptr> all_params() const {
+            std::vector<param_ptr> params;
+            for (const auto& [key, value] : params_map_) {
+                if (value->long_name().empty())
+                    params.push_back(value);
+                else {
+                    const auto& p = params_map_.find(value->long_name());
+                    if (p != params_map_.end())
+                        params.push_back(value);
+                }
+            }
+
+            std::sort(std::begin(params), std::end(params));
+            const auto last = std::unique(std::begin(params), std::end(params));
+            params.erase(last, params.end());
+
+            return params;
         }
 
     private:
@@ -231,22 +304,23 @@ namespace cli {
         }
 
         std::size_t required_args_count() const {
-            return std::count_if(
-                std::cbegin(params_),
-                std::cend(params_),
-                [](const auto& ptr) { return ptr->is_required(); }
-            );
+            const auto params = all_params();
+            return static_cast<std::size_t>(std::count_if(
+                std::cbegin(params),
+                std::cend(params),
+                [](const auto& ptr) mutable { return ptr->is_required(); }
+            ));
         }
 
         std::optional<std::string> check_required_args() const {
-            for (const auto& it : params_)
-                if (it->is_required() && it->value().empty())
-                    return {"Expected required parameter value: " + it->short_name() + " [" + it->long_name() + "]"};
+            const auto params = all_params();
+            for (const auto& parm: params)
+                if (parm->is_required() && parm->value().empty())
+                    return {"Expected required parameter value: " + parm->short_name() + " [" + parm->long_name() + "]"};
 
             return {};
         }
 
-        std::set<param_ptr> params_;
         std::unordered_map<std::string, param_ptr> params_map_;
         std::vector<std::string> usage_examples_;
 

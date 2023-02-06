@@ -9,10 +9,11 @@ add_library(cli_tools::parser ALIAS ${PROJECT_NAME})
 
 if (CLI_PARSER_TESTING)
     message(STATUS "${PROJECT_NAME} tests enabled")
-    target_include_directories(${PROJECT_NAME} PRIVATE ${DOCTEST_INCLUDE_DIR})
     add_executable(cli_parser_tests "cli_parser_test.cpp")
     target_include_directories(cli_parser_tests PRIVATE ${DOCTEST_INCLUDE_DIR})
     target_compile_features(cli_parser_tests PRIVATE cxx_std_17)
+    target_link_libraries(cli_parser_tests PRIVATE ${PROJECT_NAME})
+    add_custom_target(check ALL COMMAND cli_parser_tests)
 endif()
 
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
@@ -20,7 +21,6 @@ target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 target_sources(${PROJECT_NAME} PUBLIC
     "cli_parser.cpp" 
     "cli_parser.h"
-    "cli_parser_test.cpp"
 )
 
 if ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))

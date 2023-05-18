@@ -8,15 +8,21 @@ add_library(${PROJECT_NAME} STATIC "")
 add_library(cli_tools::parser ALIAS ${PROJECT_NAME})
 
 if (CLI_PARSER_TESTING)
+    FetchContent_Declare(doctest
+        URL https://raw.githubusercontent.com/doctest/doctest/master/doctest/doctest.h
+        DOWNLOAD_NO_EXTRACT 1
+    )
+    FetchContent_MakeAvailable(doctest)
+
     message(STATUS "${PROJECT_NAME} tests enabled")
+
     add_executable(cli_parser_tests "cli_parser_test.cpp")
-    target_include_directories(cli_parser_tests PRIVATE ${DOCTEST_INCLUDE_DIR})
+    target_include_directories(cli_parser_tests PRIVATE ${doctest_SOURCE_DIR})
     target_compile_features(cli_parser_tests PRIVATE cxx_std_17)
+    target_compile_options(cli_parser_tests PRIVATE "/W4" "/WX" "/Zi" "/EHsc")
     target_link_libraries(cli_parser_tests PRIVATE ${PROJECT_NAME})
     add_custom_target(check ALL COMMAND cli_parser_tests)
 endif()
-
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
 target_sources(${PROJECT_NAME} PUBLIC
     "cli_parser.cpp" 
@@ -45,12 +51,17 @@ if ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Cla
         -Wsign-promo
     )
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    target_compile_options(${PROJECT_NAME} PRIVATE /W4 /WX)
+    target_compile_options(${PROJECT_NAME} PRIVATE "/W4" "/WX" "/Zi" "/EHsc")
 
     target_compile_definitions(${PROJECT_NAME} PRIVATE 
         "_WIN32_WINNT=0x0A00"
         "$<$<CONFIG:Release>:/NDEBUG>"
     )
+
+    target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+
+    set(CMAKE_VS_JUST_MY_CODE_DEBUGGING "$<$<CONFIG:Debug>:ON>")
+
 
     set_property(TARGET ${PROJECT_NAME} PROPERTY 
         MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"

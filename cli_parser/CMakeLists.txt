@@ -25,8 +25,8 @@ if (CLI_PARSER_TESTING)
 endif()
 
 target_sources(${PROJECT_NAME} PUBLIC
-    "cli_parser.cpp" 
-    "cli_parser.h"
+    "src/cli_parser.cpp" 
+    "include/cli_parser.h"
 )
 
 if ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
@@ -51,7 +51,10 @@ if ((CMAKE_CXX_COMPILER_ID MATCHES "GNU") OR (CMAKE_CXX_COMPILER_ID MATCHES "Cla
         -Wsign-promo
     )
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    target_compile_options(${PROJECT_NAME} PRIVATE "/W4" "/WX" "/Zi" "/EHsc")
+    #target_compile_options(${PROJECT_NAME} PRIVATE "/W4" "/WX" "/Zi" "/EHsc")
+    target_compile_options(${PROJECT_NAME} PRIVATE 
+        "/EHsc"
+    )
 
     target_compile_definitions(${PROJECT_NAME} PRIVATE 
         "_WIN32_WINNT=0x0A00"
@@ -73,6 +76,18 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 		"$<$<CONFIG:Release>:/OPT:ICF>"
 	)
 endif()
+
+# Export include interface
+target_include_directories(${PROJECT_NAME} INTERFACE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+)
+
+# Internal include interface
+target_include_directories(${PROJECT_NAME} PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+    $<INSTALL_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+)
 
 if (NOT CMAKE_CXX_EXTENSIONS)
     set(CMAKE_CXX_EXTENSIONS OFF)

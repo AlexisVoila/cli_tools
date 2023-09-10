@@ -19,7 +19,9 @@ if (CLI_PARSER_TESTING)
     add_executable(cli_parser_tests "cli_parser_test.cpp")
     target_include_directories(cli_parser_tests PRIVATE ${doctest_SOURCE_DIR})
     target_compile_features(cli_parser_tests PRIVATE cxx_std_17)
+if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     target_compile_options(cli_parser_tests PRIVATE "/W4" "/WX" "/Zi" "/EHsc")
+endif()
     target_link_libraries(cli_parser_tests PRIVATE ${PROJECT_NAME})
     add_custom_target(check ALL COMMAND cli_parser_tests)
 endif()
@@ -61,10 +63,7 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
         "$<$<CONFIG:Release>:/NDEBUG>"
     )
 
-    target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
-
     set(CMAKE_VS_JUST_MY_CODE_DEBUGGING "$<$<CONFIG:Debug>:ON>")
-
 
     set_property(TARGET ${PROJECT_NAME} PROPERTY 
         MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>"
@@ -76,6 +75,8 @@ elseif (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
 		"$<$<CONFIG:Release>:/OPT:ICF>"
 	)
 endif()
+
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
 # Export include interface
 target_include_directories(${PROJECT_NAME} INTERFACE

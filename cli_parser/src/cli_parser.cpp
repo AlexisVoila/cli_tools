@@ -126,10 +126,7 @@ namespace cli
                 long_name_ = names[0];
             else
                 short_name_ = names[0];
-        }
-
-        if (names.size() > 1)
-        {
+        } else if (names.size() > 1) {
             short_name_ = names[0];
             long_name_ = names[1];
 
@@ -175,7 +172,7 @@ namespace cli
         const auto ptr{std::make_shared<Param>(parm)};
 
         if (!ptr->short_name().empty()) {
-            if (auto p = params_map_.find(ptr->short_name()); p != params_map_.end()) {
+            if (const auto& p = params_map_.find(ptr->short_name()); p != params_map_.end()) {
                 if (ptr->long_name() != p->second->long_name()) {
                     params_map_.erase(p->second->long_name());
                     p->second = ptr;
@@ -186,7 +183,7 @@ namespace cli
         }
 
         if (!ptr->long_name().empty()) {
-            if (const auto p = params_map_.find(ptr->long_name()); p != params_map_.end()) {
+            if (const auto& p = params_map_.find(ptr->long_name()); p != params_map_.end()) {
                 if (ptr->short_name() != p->second->short_name()) {
                     params_map_.erase(p->second->short_name());
                     p->second = ptr;

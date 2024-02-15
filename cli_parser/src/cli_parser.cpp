@@ -5,8 +5,10 @@
 #include <utility>
 #include <iomanip>
 
-namespace cli
+namespace cliap
 {
+    using namespace std::string_literals;
+
     namespace {
         std::string_view rtrim_copy(std::string_view str, std::string_view pattern) {
             if (const auto pos = str.rfind(pattern.data()); pos != std::string_view::npos)
@@ -89,19 +91,19 @@ namespace cli
         }
     }
 
-    Param& Param::required()
+    Arg& Arg::required()
     {
         is_required_ = true;
         return *this;
     }
 
-    Param& Param::flag()
+    Arg& Arg::flag()
     {
         is_flag_ = true;
         return *this;
     }
 
-    Param::Param(std::string name)
+    Arg::Arg(std::string name)
     {
         auto names = split(name, ",");
 
@@ -135,41 +137,41 @@ namespace cli
         }
     }
 
-    Param& Param::short_name(std::string short_name)
+    Arg& Arg::short_name(std::string short_name)
     {
         short_name_ = short_name;
         ltrim(short_name_, '-');
         return *this;
     }
 
-    Param& Param::long_name(std::string long_name)
+    Arg& Arg::long_name(std::string long_name)
     {
         long_name_ = long_name;
         ltrim(long_name_, '-');
         return *this;
     }
 
-    Param& Param::default_value(std::string default_value)
+    Arg& Arg::default_value(std::string default_value)
     {
         default_value_ = default_value;
         return *this;
     }
 
-    Param& Param::description(std::string description)
+    Arg& Arg::description(std::string description)
     {
         description_ = description;
         return *this;
     }
 
-    Param& Param::value(std::string value)
+    Arg& Arg::value(std::string value)
     {
         value_ = value;
         return *this;
     }
 
-    ParamParser& ParamParser::add_parameter(Param parm)
+    ArgParser& ArgParser::add_parameter(Arg parm)
     {
-        const auto ptr{std::make_shared<Param>(parm)};
+        const auto ptr{std::make_shared<Arg>(parm)};
 
         if (!ptr->short_name().empty()) {
             if (const auto& p = params_map_.find(ptr->short_name()); p != params_map_.end()) {
@@ -199,12 +201,12 @@ namespace cli
         return *this;
     }
 
-    std::optional<std::string> ParamParser::parse(int argc, char* argv[])
+    std::optional<std::string> ArgParser::parse(int argc, char* argv[])
     {
         return parse(strings_from_raw_args(argc, argv));
     }
 
-    std::optional<std::string> ParamParser::parse(const std::vector<std::string>& args)
+    std::optional<std::string> ArgParser::parse(const std::vector<std::string>& args)
     {
         std::size_t parm_count = args.size() - 1;
 
@@ -252,41 +254,43 @@ namespace cli
         return check_required_args();
     }
 
-    void ParamParser::add_usage_string(std::string usage_string)
+    void ArgParser::add_usage_string(std::string usage_string)
     {
         usage_examples_.push_back(usage_string);
     }
 
-    void ParamParser::print_help()
+    void ArgParser::print_help()
     {
         static const std::string tab(4, ' ');
 
         const auto params = all_params();
 
         for (const auto& parm : params)
-            adust_fmt_max_field_lengths(parm);
+            adjust_fmt_max_field_lengths(parm);
 
         std::cout << "Usage: \n";
         print_usage_examples();
 
         for (const auto& parm : params) {
-            std::cout << tab << parm->short_name() << " ";
-            if (!parm->long_name().empty())
-                std::cout << std::left << " [ " << std::setw(static_cast<int>(max_long_param_name_length_)) << parm->long_name() << " ] ";
+            std::cout << tab << "-" << parm->short_name() << " ";
 
-            if (!parm->default_value().empty())
-                std::cout << "(=" << std::setw(static_cast<int>(max_default_param_value_length_)) << parm->default_value() << ") ";
-            else
-                std::cout << std::string(max_default_param_value_length_ + tab.size(), ' ');
+            const auto preamble{parm->long_name().empty() ? " [   "s : " [ --"s};
+
+            std::cout << std::left << preamble << std::setw(max_long_param_name_length_) << parm->long_name() << " ] ";
 
             if (!parm->description().empty())
                 std::cout << parm->description();
+
+            if (!parm->default_value().empty())
+                std::cout << " [default: " << std::setw(max_default_param_value_length_) << parm->default_value() << "]";
+            else
+                std::cout << std::string(max_default_param_value_length_ + tab.size(), ' ');
 
             std::cout << "\n";
         }
     }
 
-    const Param& ParamParser::arg(const std::string& arg_name) const
+    const Arg& ArgParser::arg(const std::string& arg_name) const
     {
         if (const auto& arg_it = params_map_.find(arg_name); arg_it != params_map_.end())
             return *arg_it->second;
@@ -294,7 +298,7 @@ namespace cli
         return empty_arg_;
     }
 
-    void ParamParser::reset()
+    void ArgParser::reset()
     {
         params_map_.clear();
         usage_examples_.clear();
@@ -303,9 +307,9 @@ namespace cli
         max_default_param_value_length_ = 0;
     }
 
-    const std::vector<ParamParser::ParamPtr> ParamParser::all_params() const
+    const std::vector<ArgParser::ArgPtr> ArgParser::all_params() const
     {
-        std::vector<ParamPtr> params;
+        std::vector<ArgPtr> params;
         for (const auto& [key, value] : params_map_) {
             if (value->long_name().empty())
                 params.push_back(value);
@@ -323,7 +327,7 @@ namespace cli
         return params;
     }
 
-    void ParamParser::print_usage_examples() const
+    void ArgParser::print_usage_examples() const
     {
         static const std::string tab(4, ' ');
         for (const auto& str : usage_examples_)
@@ -331,7 +335,7 @@ namespace cli
         std::cout << std::endl;
     }
 
-    void ParamParser::adust_fmt_max_field_lengths(const ParamPtr& p)
+    void ArgParser::adjust_fmt_max_field_lengths(const ArgPtr& p)
     {
         if (p) {
             if (p->long_name().size() > max_long_param_name_length_)
@@ -341,7 +345,7 @@ namespace cli
         }
     }
 
-    std::optional<std::string> ParamParser::check_required_args() const
+    std::optional<std::string> ArgParser::check_required_args() const
     {
         const auto params = all_params();
         for (const auto& parm : params)

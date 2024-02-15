@@ -1,4 +1,5 @@
 ﻿#ifndef cli_parser_h__
+#define cli_parser_h__
 
 #include <iostream>
 #include <unordered_map>
@@ -9,18 +10,18 @@
 #include <sstream>
 #include <memory>
 
-namespace cli {
-    class Param {
+namespace cliap {
+    class Arg {
     public:
-        Param() = default;
-        Param(std::string name);
-        Param& short_name(std::string short_name);
-        Param& long_name(std::string long_name);
-        Param& default_value(std::string default_value);
-        Param& description(std::string description);
-        Param& value(std::string value);
-        Param& required();
-        Param& flag();
+        Arg() = default;
+        Arg(std::string name);
+        Arg& short_name(std::string short_name);
+        Arg& long_name(std::string long_name);
+        Arg& default_value(std::string default_value);
+        Arg& description(std::string description);
+        Arg& value(std::string value);
+        Arg& required();
+        Arg& flag();
 
         void set_parsed(bool is_parsed) {
             is_parsed_ = is_parsed;
@@ -59,10 +60,10 @@ namespace cli {
         bool is_parsed_{false};
     };
 
-    class ParamParser {
-        using ParamPtr = std::shared_ptr<cli::Param>;
+    class ArgParser {
+        using ArgPtr = std::shared_ptr<cliap::Arg>;
     public:
-        ParamParser& add_parameter(cli::Param parm);
+        ArgParser& add_parameter(cliap::Arg parm);
 
         std::optional<std::string> parse(const std::vector<std::string>& args);
 
@@ -72,18 +73,18 @@ namespace cli {
 
         void print_help();
 
-        const cli::Param& arg(const std::string& arg_name) const;
+        const cliap::Arg& arg(const std::string& arg_name) const;
 
         std::size_t parameters_count() const { return all_params().size(); }
 
         void reset();
 
-        const std::vector<ParamPtr> all_params() const;
+        const std::vector<ArgPtr> all_params() const;
 
     private:
         void print_usage_examples() const;
 
-        void adust_fmt_max_field_lengths(const ParamPtr& p);
+        void adjust_fmt_max_field_lengths(const ArgPtr& p);
 
         std::size_t required_args_count() const {
             const auto params = all_params();
@@ -96,13 +97,13 @@ namespace cli {
 
         std::optional<std::string> check_required_args() const;
 
-        std::unordered_map<std::string, ParamPtr> params_map_;
+        std::unordered_map<std::string, ArgPtr> params_map_;
         std::vector<std::string> usage_examples_;
 
-        std::size_t max_long_param_name_length_{};
-        std::size_t max_default_param_value_length_{};
+        std::streamsize max_long_param_name_length_{};
+        std::streamsize max_default_param_value_length_{};
 
-        cli::Param empty_arg_{};
+        cliap::Arg empty_arg_{};
     };
 }
 

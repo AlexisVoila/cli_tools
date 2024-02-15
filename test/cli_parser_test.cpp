@@ -157,15 +157,19 @@ TEST_SUITE("Testing cliap::ArgParser" * doctest::description("Class cliap::ArgPa
 
     TEST_CASE("Testing cliap::ArgParser show help info") {
         constexpr int argc = 5;
-        char* argv[argc] = {"program.exe", "--help", "--port=8080", "-a", "127.0.0.1"};
+        char* argv[argc] = {"program.exe", "--help", "--port=8080", "-ia", "127.0.0.1"};
 
         cliap::ArgParser cli_parser;
         cli_parser
             .add_parameter(cliap::Arg().short_name("-h").long_name("--help").flag().description("show help message"))
-            .add_parameter(cliap::Arg().short_name("-p").required().default_value("8080").description("listen port"))
-            .add_parameter(cliap::Arg().short_name("-a").long_name("--ip-address").required().description("ip address"));
+            .add_parameter(cliap::Arg().short_name("-p").long_name("--port").required().default_value("8080").description("listen port"))
+            .add_parameter(cliap::Arg().short_name("-ia").long_name("--ip-address").required().description("ip address"));
 
         cli_parser.parse(argc, argv);
+
+        CHECK(cli_parser.all_params().size() == 3);
+        CHECK(cli_parser.arg("ia"s).get_value_as_str() == "127.0.0.1"s);
+
         cli_parser.print_help();
     }
 }

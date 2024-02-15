@@ -272,17 +272,21 @@ namespace cliap
         print_usage_examples();
 
         for (const auto& parm : params) {
-            std::cout << tab << "-" << parm->short_name() << " ";
+            
+            std::cout << tab << "-" << std::left << std::setw(max_short_param_name_length_) << parm->short_name() << "";
 
-            const auto preamble{parm->long_name().empty() ? " [   "s : " [ --"s};
+            const auto preamble{parm->long_name().empty() ? "[   "s : " [ --"s};
 
             std::cout << std::left << preamble << std::setw(max_long_param_name_length_) << parm->long_name() << " ] ";
 
             if (!parm->description().empty())
                 std::cout << parm->description();
 
+            if (parm->is_required())
+                std::cout << " [required]";
+
             if (!parm->default_value().empty())
-                std::cout << " [default: " << std::setw(max_default_param_value_length_) << parm->default_value() << "]";
+                std::cout << " (default: " << std::setw(max_default_param_value_length_) << parm->default_value() << ")";
             else
                 std::cout << std::string(max_default_param_value_length_ + tab.size(), ' ');
 
@@ -304,6 +308,7 @@ namespace cliap
         usage_examples_.clear();
 
         max_long_param_name_length_ = 0;
+        max_short_param_name_length_ = 0;
         max_default_param_value_length_ = 0;
     }
 
@@ -340,6 +345,8 @@ namespace cliap
         if (p) {
             if (p->long_name().size() > max_long_param_name_length_)
                 max_long_param_name_length_ = p->long_name().size();
+            if (p->short_name().size() > max_short_param_name_length_)
+                max_short_param_name_length_ = p->short_name().size();
             if (p->default_value().size() > max_default_param_value_length_)
                 max_default_param_value_length_ = p->default_value().size();
         }

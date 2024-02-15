@@ -101,6 +101,7 @@ namespace cliap {
         std::vector<std::string> usage_examples_;
 
         std::streamsize max_long_param_name_length_{};
+        std::streamsize max_short_param_name_length_{};
         std::streamsize max_default_param_value_length_{};
 
         cliap::Arg empty_arg_{};

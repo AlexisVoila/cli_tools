@@ -9,7 +9,7 @@ option(CLI_PARSER_TESTING "Enable unit tests" ON)
 add_library(${PROJECT_NAME} STATIC "")
 add_library(cli_tools::parser ALIAS ${PROJECT_NAME})
 
-target_sources(${PROJECT_NAME} 
+target_sources(${PROJECT_NAME}
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}/include/cli_parser.h"
     PRIVATE

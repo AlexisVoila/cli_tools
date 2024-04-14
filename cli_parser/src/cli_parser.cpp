@@ -234,7 +234,7 @@ namespace cliap
                     continue;
                 }
 
-                // The case when the Param parm_name is given in a short form 
+                // The case when the Param parm_name is given in a short form
                 // and requires its parm_value, but the parm_value is not provided
                 if (parm_value.empty()) {
                     if (i == parm_count)
@@ -272,7 +272,6 @@ namespace cliap
         print_usage_examples();
 
         for (const auto& parm : params) {
-            
             std::cout << tab << "-" << std::left << std::setw(max_short_param_name_length_) << parm->short_name() << "";
 
             const auto preamble{parm->long_name().empty() ? "[   "s : " [ --"s};
